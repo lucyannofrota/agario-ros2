@@ -1,0 +1,22 @@
+FROM osrf/ros:humble-desktop as base
+
+WORKDIR /workspace
+
+RUN set -xe && \
+    mkdir /workspace/src && \
+    rosdep update && \
+    /bin/bash -c "source /opt/ros/humble/setup.bash && colcon build" && \
+    echo "alias humble='source /opt/ros/humble/setup.bash'" >> ~/.bashrc && \
+    echo "alias ros2ws='source /workspace/install/setup.bash'" >> ~/.bashrc && \
+    echo "ros2ws" >> ~/.bashrc && \
+    apt update -y && \
+    apt upgrade -y && \
+    apt install -y python3-pip && \
+    pip install --upgrade pip && \
+    rosdep install --from-paths src -y && \
+    pip install setuptools==58.2.0 pygame==2.5.2 pygame_menu
+
+
+CMD ["tail", "-f", "/dev/null"]
+
+FROM base as deploy
