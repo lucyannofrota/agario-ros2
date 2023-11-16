@@ -3,7 +3,9 @@
 import rclpy
 import argparse
 import random
-import agario_ros_game.network.client as client
+import threading
+# import ..agario_ros_game.view
+from agario_ros_game.view import View
 from agario_ros_game.agario import agario_ros_client
 
 def main(args=None):
@@ -36,17 +38,33 @@ def main(args=None):
     rclpy.init(args=None)
 
     node = agario_ros_client()
-    response = node.send_request(args.player_name)
-    print("Player ID: {}".format(response.player_id))
-    node.get_logger().info("Result")
+    
+    if not node.start(args.width, args.height, args.player_name):
+        rclpy.try_shutdown()
+        return 1
+    
+    node.view = View(node.screen, None, None)
 
-    # client.start(args.width, args.height, args.player_name, random.randint(0,1000))
+    # Spin in a separate thread
+    thread = threading.Thread(target=rclpy.spin, args=(node, ), daemon=True)
+    thread.start()
 
-    print(args)
+    rate = node.create_rate(10)
+
+    try:
+        while rclpy.ok():
+            # rclpy.spin_once(node)
+            # node.create_rate()
+            node.game_cycle()
+            rate.sleep()
+    except KeyboardInterrupt:
+        pass
+        
 
     # print(add(1,2))
 
     rclpy.try_shutdown()
+    thread.join()
 
 
 if __name__ == '__main__':

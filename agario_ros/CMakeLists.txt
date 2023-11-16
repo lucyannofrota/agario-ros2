@@ -21,7 +21,7 @@ find_package(rosidl_default_generators REQUIRED)
 
 # Create custom srvs
 rosidl_generate_interfaces(${PROJECT_NAME}
-    # "msg/Reg.msg"
+    "msg/PlayerCommands.msg"
     "srv/RegisterPlayer.srv"
 )
 
@@ -60,6 +60,7 @@ ament_python_install_package(${PROJECT_NAME}_game)
 # Install Python executables
 install(PROGRAMS
     scripts/agario_client_node.py
+    scripts/agario_server_node.py
     DESTINATION lib/${PROJECT_NAME}
 )
 
