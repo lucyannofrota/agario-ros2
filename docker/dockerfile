@@ -5,7 +5,7 @@ WORKDIR /workspace
 RUN set -xe && \
     mkdir /workspace/src && \
     rosdep update && \
-    /bin/bash -c "source /opt/ros/humble/setup.bash && colcon build" && \
+    /bin/bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install" && \
     echo "alias humble='source /opt/ros/humble/setup.bash'" >> ~/.bashrc && \
     echo "alias ros2ws='source /workspace/install/setup.bash'" >> ~/.bashrc && \
     echo "ros2ws" >> ~/.bashrc && \
@@ -20,3 +20,6 @@ RUN set -xe && \
 CMD ["tail", "-f", "/dev/null"]
 
 FROM base as deploy
+
+RUN git clone https://github.com/lucyannofrota/agario-ros2.git /workspace/src/agario_ros && \
+    /bin/bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install"

@@ -52,7 +52,7 @@ class agario_ros_client(Node):
         pygame.init()
         self.screen = pygame.display.set_mode((width, height))
         pygame.display.set_caption('agar.io')
-        icon = pygame.image.load('/workspace/src/agario_ros/agario_ros_game/img/logo.png')
+        icon = pygame.image.load('/workspace/src/agario_ros/agario_ros/agario_ros_game/img/logo.png')
         pygame.display.set_icon(icon)
 
         response = self.send_request(user_name)

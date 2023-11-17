@@ -3,25 +3,69 @@ version: '2.17.2'
 
 services:
 
-    agario-ros:
+    novnc:
+        image: theasp/novnc:latest
+        container_name: novnc
+        networks:
+            - ros-tutorial-network
+        environment:
+            - "DISPLAY_WIDTH=1920"
+            - "DISPLAY_HEIGHT=1080"
+            - "RUN_XTERM=no"
+        ports:
+            - "1348:8080"
+
+    agario-ros-dev:
         image: agario-ros
-        container_name: agario-ros
+        container_name: agario-ros-dev
         networks:
             - ros-tutorial-network
         build:
             context: .
             dockerfile: ./dockerfile
-            target: base
+            target: deploy
         volumes:
           - ./../agario_ros:/workspace/src/agario_ros
-          # - ./../src:/workspace/src
 
         environment:
             - "DISPLAY=novnc:0.0"
 
+    agario-ros-server:
+        image: agario-ros
+        container_name: agario-ros-server
+        networks:
+            - ros-tutorial-network
+        build:
+            context: .
+            dockerfile: ./dockerfile
+            target: deploy
+        environment:
+            - "DISPLAY=novnc:0.0"
+        command: >
+          bash -c "
+            source /workspace/install/setup.bash && ros2 run agario_ros agario_server_node.py
+          "
+    agario-ros-client:
+        image: agario-ros
+        container_name: agario-ros-client
+        networks:
+            - ros-tutorial-network
+        build:
+            context: .
+            dockerfile: ./dockerfile
+            target: deploy
+        environment:
+            - "DISPLAY=novnc:0.0"
+        command: >
+          bash -c "
+            source /workspace/install/setup.bash && ros2 run agario_ros agario_client_node.py
+          "
+        # bash -c "
+        #   source /workspace/install/setup.bash && ros2 run agario_ros agario_client_node.py --name player_name
+        # "
 
 networks:
     ros-tutorial-network:
         name: ros-tutorial-network
         driver: bridge
-        external: true
+        external: false
