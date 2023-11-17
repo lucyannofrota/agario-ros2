@@ -19,13 +19,13 @@ class PlayerCell(Cell, interfaces.Killer):
     # min ratius of cell to be able shoot
     SHOOTCELL_COND_RADIUS = 40
     SHOOTCELL_RADIUS = 10
-    SHOOTCELL_SPEED = Cell.MAX_SPEED
+    SHOOTCELL_SPEED = Cell.MAX_SPEED*3.3
 
     # min ratius of cell to be able split
     SPLITCELL_COND_RADIUS = 40
     SPLITCELL_SPEED = 3
     # the time that must pass before сell can connect to another cell
-    SPLIT_TIMETOUT = 240
+    SPLIT_TIMETOUT = 2400
 
     def __init__(self, pos, radius, color, angle=0, speed=0):
         super().__init__(pos, radius, color, angle, speed)

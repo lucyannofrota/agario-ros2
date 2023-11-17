@@ -5,7 +5,6 @@ import argparse
 import random
 import threading
 # import ..agario_ros_game.view
-from agario_ros_game.view import View
 from agario_ros_game.agario import agario_ros_client
 
 def main(args=None):
@@ -42,29 +41,10 @@ def main(args=None):
     if not node.start(args.width, args.height, args.player_name):
         rclpy.try_shutdown()
         return 1
-    
-    node.view = View(node.screen, None, None)
 
-    # Spin in a separate thread
-    thread = threading.Thread(target=rclpy.spin, args=(node, ), daemon=True)
-    thread.start()
-
-    rate = node.create_rate(10)
-
-    try:
-        while rclpy.ok():
-            # rclpy.spin_once(node)
-            # node.create_rate()
-            node.game_cycle()
-            rate.sleep()
-    except KeyboardInterrupt:
-        pass
-        
-
-    # print(add(1,2))
+    rclpy.spin(node)
 
     rclpy.try_shutdown()
-    thread.join()
 
 
 if __name__ == '__main__':

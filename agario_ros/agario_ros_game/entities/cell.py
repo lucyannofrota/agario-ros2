@@ -11,8 +11,8 @@ class Cell(Circle, interfaces.Victim):
 
     BORDER_WIDTH=0
     FRICTION = 0.1
-    MAX_SPEED = 5
-    SIZES = (5, 7, 10)
+    MAX_SPEED = 2
+    SIZES = (5, 7, 10) 
     SIZES_CUM = (70, 20, 10)
 
     def __init__(self, pos, radius, color, angle=0, speed=0):
@@ -27,7 +27,7 @@ class Cell(Circle, interfaces.Victim):
     def move(self):
         """Move accroding to stored velocity."""
         self.speed -= self.FRICTION
-        if self.speed < 0:
+        if self.speed < 0: 
             self.speed = 0
         # get cartesian vector
         diff_xy = gu.polar_to_cartesian(self.angle, self.speed*self.MAX_SPEED)

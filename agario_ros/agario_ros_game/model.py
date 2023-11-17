@@ -49,12 +49,10 @@ class Model():
             self.add_cell(cell)
 
         if emitted_cells:
-            #TODO: change logger
-            # logger.debug(f'{player} shot')
+            print(f'{player} shot')
             pass
         else:
-            #TODO: change logger
-            # logger.debug(f'{player} tried to shoot, but he can\'t')
+            print(f'{player} tried to shoot, but he can\'t')
             pass
 
     def split(self, player, angle):
@@ -64,18 +62,15 @@ class Model():
         self.add_player(player)
 
         if new_parts:
-            #TODO: change logger
-            # logger.debug(f'{player} splitted')
+            print(f'{player} splitted')
             pass
         else:
-            #TODO: change logger
-            # logger.debug(f'{player} tried to split, but he can\'t')
+            print(f'{player} tried to split, but he can\'t')
             pass
 
-    def update(self):
+    def update(self,clients):
         """Updates game state."""
         if time.time() - self.round_start >= self.ROUND_DURATION:
-            #TODO: change logger
             # logger.debug('New round was started.')
             self.__reset_players()
             self.round_start = time.time()
@@ -108,8 +103,7 @@ class Model():
             for cell in cells:
                 killed_cell = player.attempt_murder(cell)
                 if killed_cell:
-                    #TODO: change logger
-                    # logger.debug(f'{player} ate {killed_cell}')
+                    # print(f'{player} ate {killed_cell}')
                     self.remove_cell(killed_cell)
                     # self.cells.remove(killed_cell)
             
@@ -120,15 +114,14 @@ class Model():
                 killed_cell = player.attempt_murder(another_player)
                 if killed_cell:
                     if len(another_player.parts) == 1:
-                        #TODO: change logger
-                        # logger.debug(f'{player} ate {another_player}')
+                        print(f'{player} ate {another_player}')
                         self.remove_player(another_player)
+                        clients.pop(another_player.nick)
                         observable_players.remove(another_player)
-                        another_player.remove_part(killed_cell)
                     else:
-                        #TODO: change logger
-                        # logger.debug(f'{player} ate {another_player} part {killed_cell}')
-                        pass
+                        print(f'{player} ate {another_player} part {killed_cell}')
+                        another_player.remove_part(killed_cell)
+        return clients
 
     def spawn_cells(self, amount):
         """Spawn passed amount of cells on the field."""

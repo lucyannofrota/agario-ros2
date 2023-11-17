@@ -16,6 +16,8 @@ class Player(interfaces.Victim, interfaces.Killer):
 
     LAST_ID = -1
 
+    size_slow_factor = 100
+
     def __init__(self, nick, player_cell):
         self.id = self.new_id()
         self.nick = nick
@@ -25,7 +27,7 @@ class Player(interfaces.Victim, interfaces.Killer):
 
     def move(self):
         """Move each part of player and check parts for collision."""
-        for i, cell in enumerate(self.parts):
+        for i, cell in enumerate(self.parts):  
             cell.move()
             for another_cell in self.parts[i + 1:]:
                 # cells shoud intersects and not be the same
@@ -53,6 +55,7 @@ class Player(interfaces.Victim, interfaces.Killer):
                 speed,
                 cell.pos)
             # update velocity of cell
+            cell.MAX_SPEED = (1/((cell.radius/2)**1.1))*self.size_slow_factor
             cell.update_velocity(*rel_vel)
 
     def shoot(self, angle):
@@ -64,7 +67,7 @@ class Player(interfaces.Victim, interfaces.Killer):
 
         return emmited
 
-    def split(self, angle):
+    def split(self, angle):  
         new_parts = list()
         for cell in self.parts:
             if cell.able_to_split():
@@ -78,8 +81,8 @@ class Player(interfaces.Victim, interfaces.Killer):
         xsum = sum((cell.pos[0] for cell in self.parts))
         ysum = sum((cell.pos[1] for cell in self.parts))
         center = [
-            xsum/len(self.parts),
-            ysum/len(self.parts)]
+            xsum/(len(self.parts) if len(self.parts) != 0 else 1),
+            ysum/(len(self.parts) if len(self.parts) != 0 else 1)]
         return center
 
     def score(self):
@@ -120,6 +123,7 @@ class Player(interfaces.Victim, interfaces.Killer):
 
     def remove_part(self, cell):
         """Removes passed player cell from player parts list."""
+        print("Remove part");
         self.parts.remove(cell)
 
     def reset(self):

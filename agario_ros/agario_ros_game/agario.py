@@ -2,14 +2,20 @@
 
 import rclpy
 import pygame
+import pickle
 from rclpy.node import Node
 from agario_ros.srv import RegisterPlayer
-from agario_ros.msg import PlayerCommands
+from agario_ros.msg import PlayerCommands, GameState
 from .model import Model
+from .view import View
 from .entities.player import Player
+import codecs
+import sys
 
 BACKGROUND_COLOR = (24, 26, 50)
 BACKGROUND_COLOR = (40, 0, 40)
+
+MODEL_BYTE_SIZE = 2**16
 
 FPS = 60
 
@@ -21,6 +27,7 @@ class agario_ros_client(Node):
         self.player_id = None
         self.player_name = None
         self.is_in_lobby = False
+        self.registered = False
         self.clock = pygame.time.Clock()
         self.cli = self.create_client(RegisterPlayer, 'agario_ros_register_player')
         while not self.cli.wait_for_service(timeout_sec=1.0):
@@ -28,6 +35,8 @@ class agario_ros_client(Node):
         self.req = RegisterPlayer.Request()
         self.player_update_msg = PlayerCommands()
         self.player_update_pub = self.create_publisher(PlayerCommands,"agario_ros_player_update",10)
+        self.game_state_sub = self.create_subscription(GameState,'agario_ros_game_state_update',self.game_state_update_handler,10)
+        self.d_count = 10
 
     def send_request(self, player_name):
         self.req.player_name = player_name
@@ -46,44 +55,21 @@ class agario_ros_client(Node):
         icon = pygame.image.load('/workspace/src/agario_ros/agario_ros_game/img/logo.png')
         pygame.display.set_icon(icon)
 
-        # init class with game connection
-        # gameconn = GameConnection(screen)
-        # create menu
-        # menu = MyMenu(width*0.9, height*0.9)
-        # bind connection method to menu button
-        # gameconn.connect_to_game
-        # menu.update_start_menu(gameconn.connect_to_game)
-        # gameconn.connect_to_game({'nick': user_name, 'addr': 'localhost:9999'})
-
         response = self.send_request(user_name)
         if response.success:
             self.get_logger().info("Player Registered")
             self.player_id = response.id
+            self.view = View(self.screen, None, None)
+            self.registered = True
+            self.input_capture_tim = self.create_timer(1/FPS, self.input_capture)
             return True
         else:
             self.get_logger().info("Invalid Player Name")
             return False
-
-
-        # FPS = 30
-        # clock = pygame.time.Clock()
-
-        # # start pygame loop
-        # while True:
-        #     events = pygame.event.get()
-        #     for event in events:
-        #         if event.type == pygame.QUIT:
-        #             exit()
-            
-        #     self.screen.fill(BACKGROUND_COLOR)
-            
-        #     # if menu.get_main_menu().is_enabled():
-        #     #     menu.get_main_menu().draw(screen)
-        #     # menu.get_main_menu().update(events)
-        #     pygame.display.flip()
-        #     clock.tick(FPS)
     
-    def game_cycle(self):
+    def input_capture(self):
+        if not self.registered:        
+            return
         # getting list of pressed buttons
         self.player_update_msg.keys = []
         for event in pygame.event.get():
@@ -100,34 +86,50 @@ class agario_ros_client(Node):
         # sending velocity vector and list of pressed keys
         self.player_update_pub.publish(self.player_update_msg)
 
-        # # getting current player and game model state
-        # data = sock.recv(2**16)
-        # msg = pickle.loads(data)
+    def game_state_update_handler(self,msg):
+        if not self.registered:
+            return
+        unpickled = pickle.loads(codecs.decode(msg.data.encode(), "base64"))
 
-        # # update view and redraw
-        # view.player = None
-        # view.model = msg
-        # for pl in view.model.players:
-        #     if pl.id == self.player_id:
-        #         view.player = pl
-        #         break
+        # update view and redraw
+        self.view.player = None
+        this_player = None
+        for player in unpickled.players:
+            if player.nick == self.player_name:
+                this_player = player
+        if this_player == None:
+            self.d_count = self.d_count - 1
+            if self.d_count == 0:
+                self.get_logger().warning("Player was killed!")
+                self.destroy_node()
+                sys.exit()
+                exit()
+        
+        if this_player:
+            self.view.model = unpickled.copy_for_client(this_player.center())
+            for pl in self.view.model.players:
+                if pl.nick == self.player_name:
+                    self.view.player = pl
+                    break
 
-        # if view.player is None:
-        #     logger.debug("Player was killed!")
-        #     return
+            if self.view.player is None:
+                self.get_logger().warning("Player was killed!")
+                return
+        
+            self.view.redraw()
 
-        # view.redraw()
-        # time.sleep(1/40)
-        self.clock.tick(FPS)
+SPAWN_COUNT_MAX = 500
 
 class agario_ros_server(Node):
 
     bounds = [1000, 1000]
-    cell_num = 150
+    cell_num = 250
     model = Model(list(), bounds=bounds)
     model.spawn_cells(cell_num)
 
     agario_clients = dict()
+
+    player_input_buffer = []
 
     p = Player.make_random("Jetraid", bounds)
 
@@ -135,6 +137,10 @@ class agario_ros_server(Node):
         super().__init__('agario_ros_server')
         self.srv = self.create_service(RegisterPlayer,'agario_ros_register_player',self.player_register_handler)
         self.player_update_sub = self.create_subscription(PlayerCommands,'agario_ros_player_update',self.player_update_handler,10)
+        self.game_state_pub = self.create_publisher(GameState,'agario_ros_game_state_update',10)
+        self.game_state_msg = GameState()
+        self.wall_timer = self.create_timer(0.1/4, self.server_cycle_handler)
+        self.spawn_counter = 500
 
     def player_register_handler(self,request,response):
 
@@ -163,30 +169,32 @@ class agario_ros_server(Node):
         return response
 
     def player_update_handler(self,msg):
-        print(msg)
         mouse_pos = msg.mouse_pos
         keys = msg.keys
 
         # define player according to client address
-        player = self.agario_clients[msg.player_name]
-        if not player:
-            return
+        if msg.player_name in self.agario_clients:
+            player = self.agario_clients[msg.player_name]
 
-        # simulate player actions
-        for key in keys:
-            if key == pygame.K_w:
-                self.model.shoot(
-                    player,
-                    mouse_pos[0])
-            elif key == pygame.K_SPACE:
-                self.model.split(
-                    player,
-                    mouse_pos[0])
-        # update player velocity and update model state
-        self.model.update_velocity(player, *mouse_pos)
-        self.model.update()
+            # simulate player actions
+            for key in keys:
+                if key == pygame.K_w:
+                    self.model.shoot(
+                        player,
+                        mouse_pos[0])
+                elif key == pygame.K_SPACE:
+                    self.model.split(
+                        player,
+                        mouse_pos[0])
+            # update player velocity and update model state
+            self.model.update_velocity(player, *mouse_pos)
+            self.agario_clients = self.model.update(self.agario_clients)
 
-        # send player state and game model state to client
-        # data = pickle.dumps(model.copy_for_client(player.center()))
-        # socket = self.request[1]
-        # socket.sendto(data, self.client_address)
+    def server_cycle_handler(self):
+        # send player state and game model state to clients
+        self.spawn_counter = self.spawn_counter - 1
+        if self.spawn_counter <= 0:
+            self.spawn_counter = SPAWN_COUNT_MAX
+            self.model.spawn_cells(50)
+        self.game_state_msg.data = codecs.encode(pickle.dumps(self.model), "base64").decode()
+        self.game_state_pub.publish(self.game_state_msg)

@@ -22,6 +22,7 @@ find_package(rosidl_default_generators REQUIRED)
 # Create custom srvs
 rosidl_generate_interfaces(${PROJECT_NAME}
     "msg/PlayerCommands.msg"
+    "msg/GameState.msg"
     "srv/RegisterPlayer.srv"
 )
 
@@ -41,10 +42,10 @@ ament_target_dependencies(
 )
 
 # Install Cpp executables
-install(TARGETS
-    agario_server_node
-    DESTINATION lib/${PROJECT_NAME}
-)
+# install(TARGETS
+#     agario_server_node
+#     DESTINATION lib/${PROJECT_NAME}
+# )
 
 rosidl_get_typesupport_target(cpp_typesupport_target
     ${PROJECT_NAME} rosidl_typesupport_cpp)
