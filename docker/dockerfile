@@ -11,15 +11,18 @@ RUN set -xe && \
     echo "ros2ws" >> ~/.bashrc && \
     apt update -y && \
     apt upgrade -y && \
-    apt install -y python3-pip && \
+    apt install -y python3-pip ros-humble-rmw-cyclonedds-cpp && \
     pip install --upgrade pip && \
     rosdep install --from-paths src -y && \
     pip install setuptools==58.2.0 pygame==2.5.2 pygame_menu
 
-
 CMD ["tail", "-f", "/dev/null"]
 
 FROM base as deploy
+
+# ROS2 DDS Discovery
+ENV RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+ENV ROS_DOMAIN_ID=9
 
 RUN git clone https://github.com/lucyannofrota/agario-ros2.git /workspace/src/agario_ros && \
     /bin/bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install"

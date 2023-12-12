@@ -31,7 +31,7 @@ services:
             - "DISPLAY=novnc:0.0"
 
     agario-ros-server:
-        image: agario-ros
+        image: lucyannofrota/agario-ros
         container_name: agario-ros-server
         networks:
             - ros-tutorial-network
@@ -46,7 +46,7 @@ services:
             source /workspace/install/setup.bash && ros2 run agario_ros agario_server_node.py
           "
     agario-ros-client:
-        image: agario-ros
+        image: lucyannofrota/agario-ros
         container_name: agario-ros-client
         networks:
             - ros-tutorial-network
